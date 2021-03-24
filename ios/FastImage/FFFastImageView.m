@@ -1,5 +1,6 @@
 #import "FFFastImageView.h"
 #import <SDWebImage/UIImage+MultiFormat.h>
+#import <SDWebImage/SDWebImageTransition.h>
 
 @interface FFFastImageView()
 
@@ -195,6 +196,7 @@
 
 - (void)downloadImage:(FFFastImageSource *) source options:(SDWebImageOptions) options context:(SDWebImageContext *)context {
     __weak typeof(self) weakSelf = self; // Always use a weak reference to self in blocks
+    self.sd_imageTransition = SDWebImageTransition.fadeTransition;
     [self sd_setImageWithURL:_source.url
             placeholderImage:nil
                      options:options

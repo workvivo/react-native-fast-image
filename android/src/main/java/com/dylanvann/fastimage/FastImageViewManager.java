@@ -69,44 +69,46 @@ class FastImageViewManager extends SimpleViewManager<FastImageViewWithUrl> imple
             view.setImageDrawable(null);
             return;
         }
+        try{
+            //final GlideUrl glideUrl = FastImageViewConverter.getGlideUrl(view.getContext(), source);
+            final FastImageSource imageSource = FastImageViewConverter.getImageSource(view.getContext(), source);
+            final GlideUrl glideUrl = imageSource.getGlideUrl();
 
-        //final GlideUrl glideUrl = FastImageViewConverter.getGlideUrl(view.getContext(), source);
-        final FastImageSource imageSource = FastImageViewConverter.getImageSource(view.getContext(), source);
-        final GlideUrl glideUrl = imageSource.getGlideUrl();
+            // Cancel existing request.
+            view.glideUrl = glideUrl;
+            if (requestManager != null) {
+                requestManager.clear(view);
+            }
 
-        // Cancel existing request.
-        view.glideUrl = glideUrl;
-        if (requestManager != null) {
-            requestManager.clear(view);
-        }
+            String key = glideUrl.toStringUrl();
+            FastImageOkHttpProgressGlideModule.expect(key, this);
+            List<FastImageViewWithUrl> viewsForKey = VIEWS_FOR_URLS.get(key);
+            if (viewsForKey != null && !viewsForKey.contains(view)) {
+                viewsForKey.add(view);
+            } else if (viewsForKey == null) {
+                List<FastImageViewWithUrl> newViewsForKeys = new ArrayList<>(Collections.singletonList(view));
+                VIEWS_FOR_URLS.put(key, newViewsForKeys);
+            }
 
-        String key = glideUrl.toStringUrl();
-        FastImageOkHttpProgressGlideModule.expect(key, this);
-        List<FastImageViewWithUrl> viewsForKey = VIEWS_FOR_URLS.get(key);
-        if (viewsForKey != null && !viewsForKey.contains(view)) {
-            viewsForKey.add(view);
-        } else if (viewsForKey == null) {
-            List<FastImageViewWithUrl> newViewsForKeys = new ArrayList<>(Collections.singletonList(view));
-            VIEWS_FOR_URLS.put(key, newViewsForKeys);
-        }
+            ThemedReactContext context = (ThemedReactContext) view.getContext();
+            RCTEventEmitter eventEmitter = context.getJSModule(RCTEventEmitter.class);
+            int viewId = view.getId();
+            eventEmitter.receiveEvent(viewId, REACT_ON_LOAD_START_EVENT, new WritableNativeMap());
 
-        ThemedReactContext context = (ThemedReactContext) view.getContext();
-        RCTEventEmitter eventEmitter = context.getJSModule(RCTEventEmitter.class);
-        int viewId = view.getId();
-        eventEmitter.receiveEvent(viewId, REACT_ON_LOAD_START_EVENT, new WritableNativeMap());
-
-        if (requestManager != null) {
-            requestManager
-                    // This will make this work for remote and local images. e.g.
-                    //    - file:///
-                    //    - content://
-                    //    - res:/
-                    //    - android.resource://
-                    //    - data:image/png;base64
-                    .load(imageSource.getSourceForLoad())
-                    .apply(FastImageViewConverter.getOptions(context, imageSource, source))
-                    .listener(new FastImageRequestListener(key))
-                    .into(view);
+            if (requestManager != null) {
+                requestManager
+                        // This will make this work for remote and local images. e.g.
+                        //    - file:///
+                        //    - content://
+                        //    - res:/
+                        //    - android.resource://
+                        //    - data:image/png;base64
+                        .load(imageSource.getSourceForLoad())
+                        .apply(FastImageViewConverter.getOptions(context, imageSource, source))
+                        .listener(new FastImageRequestListener(key))
+                        .into(view);
+            }
+        } catch(Exception e){
         }
     }
 
